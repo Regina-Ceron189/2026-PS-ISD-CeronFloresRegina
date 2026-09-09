@@ -1,0 +1,16 @@
+{
+  "name": "primerparcial",
+  "version": "1.0.0",
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "license": "ISC",
+  "author": "ReginaCeron",
+  "type": "commonjs",
+  "main": "01cliente.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
