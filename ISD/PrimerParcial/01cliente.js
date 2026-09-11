@@ -7,8 +7,7 @@ El problema es como apuntar al back
 
 */
 
-const API_URL =
-"https://proyectobackcecyt9.onrender.com"; //Cambia esto segun la URL de tu backend
+const API_URL = "https://proyectobackcecyt9.onrender.com"; //Cambia esto segun la URL de tu backend
 
 async function main() {
  

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primera Petición GET</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Primera Petición GET</h1>
+
+        <div class="analisis">
+            <h2>¿Qué pasó?</h2>
+            <p>Al ejecutar el archivo <code>01cliente.js</code> desde la terminal activando Node.js, se comenzó a mandar la petición a la API para poder obtener la información de los talleres. El programa realizó una petición GET, con la cual se solicita información al servidor.</p>
+            <p>Después de mandar la petición, el servidor recibió la solicitud y regresó la información que se estaba pidiendo. Al revisar la terminal pude ver que sí se obtuvo una respuesta. También observé que en una parte de la información apareció escrito <code>${respuesta.status}</code> y no el resultado que debería mostrar. Esto se debe a que en esa parte del código se utilizaron comillas normales y no las comillas necesarias para que se pueda mostrar el valor de la variable.</p>
+            <br/>
+            <h2>¿Se conectó o no?</h2>
+            <p>Sí se conectó correctamente, ya que la petición sí llegó al servidor y se recibió una respuesta con los datos solicitados. Esto demuestra que el archivo <code>01cliente.js</code> logró comunicarse correctamente con la API.</p>
+            <p>El detalle que se presentó solamente afecta la forma en la que se muestra una parte del resultado en la terminal, pero no afecta la conexión ni la información que se recibió del servidor.</p>
+            <br/>
+            <h2>¿Qué elementos se obtuvieron?</h2>
+            <p>Al recibir la respuesta de la API se obtuvieron los datos de tres talleres. De cada uno se obtuvo su nombre, el instructor que lo imparte, la fecha en la que se realizará y el número de personas que pueden asistir.</p>
+            <ul>
+                <li>El primer taller es Introducción a Python, impartido por la Ing. María López, con fecha del 10 de agosto de 2026 y un cupo de 25 personas.</li>
+                <li>El segundo taller es Fundamentos de Redes, impartido por el Ing. Carlos Ramírez, con fecha del 12 de agosto de 2026 y un cupo de 30 personas.</li>
+                <li>El tercer taller es Diseño de Bases de Datos, impartido por la Ing. Ana Torres, con fecha del 14 de agosto de 2026 y un cupo de 20 personas.</li>
+            </ul>
+                <p>También se obtuvo información adicional de cada registro, como su identificador y la fecha en la que fue creado. En general, con la ejecución pude comprobar que la petición se realizó correctamente y que la API regresó la información de los talleres que se estaban solicitando.</p>
+                <br/>
+                <br/>
+        </div>
+        <div class="imagen-evidencia">
+            <img src="imagenode.jpeg" width="1240" alt="Captura de pantalla de la terminal en VS Code ejecutando 01cliente.js">
+        </div>
+    </div>
+</body>
+</html>
