@@ -1,200 +1,212 @@
-//vamos a programar la logica de IPV4 para FLSM y VLSM
-
-(function (global){
+(function (global) {
     'use strict';
 
-    //la conversión de decimal a binario
-    //por ejemplo 192 -> 11000000
-    function octetoABinario(octeto){
+    function octetoABinario(octeto) {
         return octeto.toString(2).padStart(8, '0');
     }
 
-    //vamos a prograr los pasos del metodo de restas
-    //192 valor 2^7  128   2^6  64, asi asucesivamente
-    function pasosDecimalABinario(octeto){
+    function pasosDecimalABinario(octeto) {
         const pesos = [128, 64, 32, 16, 8, 4, 2, 1];
         let resto = octeto;
-
         return pesos.map((peso) => {
             const bit = resto >= peso ? 1 : 0;
-            if(bit) resto -= peso;
-            return{peso, bit, resto} 
+            if (bit) resto -= peso;
+            return { peso, bit, resto };
         });
     }
 
-    //para una ip como entero 32 bits
-    function ipAEntero(ip){
+    function ipAEntero(ip) {
         const partes = String(ip).trim().split('.');
-        if(partes.length !== 4) throw new Error(`"${ip}" no valida`);
+        if (partes.length !== 4) throw new Error(`"${ip}" no es una IP válida`);
         return partes.reduce((acc, parte) => {
-            if(!/^\d{1,3}$/.test(parte)) throw new Error(`"${parte}" no es un octeto favor de verificar la IP`);
+            if (!/^\d{1,3}$/.test(parte)) throw new Error(`"${parte}" no es un octeto válido`);
             const n = Number(parte);
-            if( n > 255 ) throw new Error(`"${n}" es mayor que 255 no es una IP Válida`);
-            return acc * 256 + n; //esta multiplicacion en vez de << para no caer en negativos
+            if (n < 0 || n > 255) throw new Error(`"${n}" está fuera del rango 0 a 255`);
+            return acc * 256 + n;
         }, 0);
     }
 
-    function enteroAIp(n){
-        return [24, 16, 8, 0].map((d) => Math.floor(n/2**d)%256).join('.');
+    function enteroAIp(n) {
+        return [24, 16, 8, 0].map((d) => Math.floor(n / 2 ** d) % 256).join('.');
     }
 
-    function ipABinario(ip){
+    function ipABinario(ip) {
         return enteroAIp(ipAEntero(ip)).split('.').map(Number).map(octetoABinario).join('.');
     }
 
-    function prefijoAMascara(prefijo){
-        return enteroAIp(prefijo === 0 ? 0 : (2**32 - 2**(32-prefijo)));
+    function prefijoAMascara(prefijo) {
+        if (!Number.isInteger(prefijo) || prefijo < 0 || prefijo > 32) {
+            throw new Error('El prefijo debe estar entre 0 y 32');
+        }
+        const n = prefijo === 0 ? 0 : (2 ** 32 - 2 ** (32 - prefijo));
+        return enteroAIp(n);
     }
 
-    function mascaraAPrefijo(mascara){
+    function mascaraAPrefijo(mascara) {
         const bin = ipABinario(mascara).replace(/\./g, '');
-        if(!/^1*0*$/.test(bin)) throw new Error(`"${mascara}", no es una mascara valida (los 1 deben ir seguidos)`);
+        if (!/^1*0*$/.test(bin)) throw new Error(`"${mascara}" no es una máscara válida`);
         return bin.indexOf('0') === -1 ? 32 : bin.indexOf('0');
     }
 
-    function leerPrefijo(texto){
-        // "/26"  255.255.255.192
+    function leerPrefijo(texto) {
         const t = String(texto).trim().replace(/^\//, '');
-        if(t.includes('.')) return mascaraAPrefijo(t);
+        if (t.includes('.')) return mascaraAPrefijo(t);
         const p = Number(t);
-        if(!Number.isInteger(p) || p < 0 || p > 32) throw new Error(`"/${t}", no es un prefijo valido (0 a 32)`);
+        if (!Number.isInteger(p) || p < 0 || p > 32) {
+            throw new Error(`"${texto}" no es un prefijo válido (0 a 32)`);
+        }
         return p;
     }
 
-    //vamos a detectar la clase de red
-
-    function claseDeRed(ip){
-        const primer = Math.floor(ipAEntero(ip)/2**24);
-        if(primer >= 1 && primer >= 126) return {clase: 'A', prefijo:8};
-        if(primer === 127) return {clase: 'Local', prefijo:8};
-        if(primer >= 128 && primer >= 191) return {clase: 'B', prefijo:16};
-        if(primer >= 192 && primer >= 223) return {clase: 'C', prefijo:24};
-        if(primer >= 224 && primer >= 239) return {clase: 'D', prefijo:null};
-        return {clase: 'E', prefijo:null};
+    function claseDeRed(ip) {
+        const primer = Math.floor(ipAEntero(ip) / 2 ** 24);
+        if (primer === 127) return { clase: 'Local', prefijo: 8 };
+        if (primer >= 1 && primer <= 126) return { clase: 'A', prefijo: 8 };
+        if (primer >= 128 && primer <= 191) return { clase: 'B', prefijo: 16 };
+        if (primer >= 192 && primer <= 223) return { clase: 'C', prefijo: 24 };
+        if (primer >= 224 && primer <= 239) return { clase: 'D', prefijo: null };
+        return { clase: 'E', prefijo: null };
     }
 
-    function esPrivada(ip){
+    function esPrivada(ip) {
         const n = ipAEntero(ip);
-        const en = (red, pref) => Math.floor(n/2 **(32-pref)) === Math.floor(ipAEntero(red)/2 **(32-pref));
-        return en('10.0.0.0', 8 || '172.16.0.0', 12 || '192.168.0.0', 16); 
+        const en = (red, pref) =>
+            Math.floor(n / 2 ** (32 - pref)) ===
+            Math.floor(ipAEntero(red) / 2 ** (32 - pref));
+        return en('10.0.0.0', 8) ||
+            en('172.16.0.0', 12) ||
+            en('192.168.0.0', 16);
     }
 
-    //subred
-    function hostsUtilizable(prefijo){
-        if(prefijo === 32) return 1;
-        if(prefijo === 31) return 2;
-        return 2**(32-prefijo)-2;
+    function hostsUtilizable(prefijo) {
+        if (prefijo === 32) return 1;
+        if (prefijo === 31) return 2;
+        return 2 ** (32 - prefijo) - 2;
     }
 
-    function describirSubred(redEntero, prefijo, nombre){
-        const tamano = 2**(32-prefijo);
+    function describirSubred(redEntero, prefijo, nombre) {
+        const tamano = 2 ** (32 - prefijo);
         const broadcast = redEntero + tamano - 1;
         const conHosts = prefijo < 31;
-
-        return{
+        return {
             nombre: nombre || '',
             red: enteroAIp(redEntero),
             prefijo,
-            mascara : prefijoAMascara(prefijo),
-            primerHost : enteroAIp(conHosts ? redEntero + 1 : redEntero),
-            ultimoHost : enteroAIp(conHosts ? broadcast -1 : broadcast),
-            broadcast : enteroAIp(prefijo),
-            hosts : hostsUtilizable(prefijo),
-            tamanoBloque : tamano
+            mascara: prefijoAMascara(prefijo),
+            primerHost: enteroAIp(conHosts ? redEntero + 1 : redEntero),
+            ultimoHost: enteroAIp(conHosts ? broadcast - 1 : broadcast),
+            broadcast: enteroAIp(broadcast),
+            hosts: hostsUtilizable(prefijo),
+            tamanoBloque: tamano
         };
     }
 
-    //calcular la red a la que pertenece una ip
-    function analizarIp(ip, prefijo){
+    function analizarIp(ip, prefijo) {
         const n = ipAEntero(ip);
-        const tamano = 2**(32-prefijo);
-        const red = Math.floor(n/tamano)*tamano;
+        const tamano = 2 ** (32 - prefijo);
+        const red = Math.floor(n / tamano) * tamano;
         return describirSubred(red, prefijo);
     }
 
-    function validarRedBase(ip, prefijo){
+    function validarRedBase(ip, prefijo) {
         const n = ipAEntero(ip);
-        const tamano = 2**(32-prefijo);
-        if (n%tamano !== 0){
-            const correcta = enteroAIp(Math.floor(n/tamano)*tamano);
-            throw new Error(`${ip}/${prefijo} no es una dirección de red valida. `);
+        const tamano = 2 ** (32 - prefijo);
+        if (n % tamano !== 0) {
+            const correcta = enteroAIp(Math.floor(n / tamano) * tamano);
+            throw new Error(`${ip}/${prefijo} no es una dirección de red válida. La red correspondiente es ${correcta}/${prefijo}.`);
         }
         return n;
     }
 
-    //FSLM para subredes del mismo tamaño
-    //opciones subredes N o hostporsubred
-
-    function subnetearFLSM(ip, prefijo, opciones){
-        const base = validarRedBase(ip, prefijo);
-        let bistPrestados;
-
-        if(opciones.subredes){
-            bistPrestados = Math.ceil(Math.log2(opciones.subredes));
-        }else if (opciones.hostPorSubred){
-            const bitsHost = bitsParaHosts(opciones.hostPorSubred);
-            bistPrestados = 32 - prefijo - bitsHost;
-        }else{
-            throw new Error('Indica el numero de subredes o de host por subred');
+    function bitsParaHosts(hosts) {
+        if (!Number.isInteger(hosts) || hosts < 1) {
+            throw new Error(`${hosts} no es una cantidad válida de hosts`);
         }
-        const nuevoPrefijo = prefijo + bistPrestados;
-        if(bistPrestados < 0 || nuevoPrefijo > 30){
-            throw new Error(`No caben: harían falta /${nuevoPrefijo}, fuera del rango /${prefijo}-/30`);
-        }
-
-        const total = 2**bistPrestados;
-        const tamano = 2**(32-nuevoPrefijo);
-        const subredes = [];
-
-        for(let i = 0; i < total; i++){
-            subredes.push(describirSubred(base + i*tamano, nuevoPrefijo, `Subred ${i+1}`));
-        }
-        return { bistPrestados, nuevoPrefijo, totalSubredes : total, hostPorSubred: hostsUtilizable(nuevoPrefijo), subredes }
-
-    }
-
-    //funcion para n bits de host tales que 2^n - 2 >= host
-    function bitsParaHosts(hosts){
-        if(!Number.isInteger(hosts) || hosts < 1) throw new Error(`${hosts} no es un numero de hosts valido`);
         let n = 2;
-        while(2**n -2 < hosts) n++;
+        while (2 ** n - 2 < hosts) n++;
         return n;
     }
 
-    //cuando nos den requermientos nombre y los hosts de las subredes
-    function subnetearVLSM(ip, prefijo, requerimientos){
+    function subnetearFLSM(ip, prefijo, opciones) {
         const base = validarRedBase(ip, prefijo);
-        const fin = base + 2**(32-prefijo);
-        //ordenamos
-        const oredenados = requerimientos
-        .map((r, i)=>{({...r, i})})
-        .sort((a,b) => n.hosts - a.hosts || a.i - b.i);
+        let bitsPrestados;
+
+        if (opciones.subredes !== undefined) {
+            if (!Number.isInteger(opciones.subredes) || opciones.subredes < 1) {
+                throw new Error('El número de subredes debe ser un entero positivo');
+            }
+            bitsPrestados = Math.ceil(Math.log2(opciones.subredes));
+        } else if (opciones.hostsPorSubred !== undefined) {
+            const bitsHost = bitsParaHosts(opciones.hostsPorSubred);
+            bitsPrestados = 32 - prefijo - bitsHost;
+        } else {
+            throw new Error('Indica el número de subredes o de hosts por subred');
+        }
+
+        const nuevoPrefijo = prefijo + bitsPrestados;
+        if (bitsPrestados < 0 || nuevoPrefijo > 30) {
+            throw new Error(`No caben los requerimientos: el nuevo prefijo sería /${nuevoPrefijo}.`);
+        }
+
+        const total = 2 ** bitsPrestados;
+        const tamano = 2 ** (32 - nuevoPrefijo);
+        const subredes = [];
+        for (let i = 0; i < total; i++) {
+            subredes.push(describirSubred(base + i * tamano, nuevoPrefijo, `Subred ${i + 1}`));
+        }
+        return {
+            bitsPrestados,
+            nuevoPrefijo,
+            totalSubredes: total,
+            hostsPorSubred: hostsUtilizable(nuevoPrefijo),
+            subredes
+        };
+    }
+
+    function subnetearVLSM(ip, prefijo, requerimientos) {
+        const base = validarRedBase(ip, prefijo);
+        const fin = base + 2 ** (32 - prefijo);
+        const ordenados = requerimientos
+            .map((r, i) => ({ ...r, i }))
+            .sort((a, b) => b.hosts - a.hosts || a.i - b.i);
 
         let siguiente = base;
-        const subredes = oredenados.map((r)=>{
+        const subredes = ordenados.map((r) => {
             const bitsHosts = bitsParaHosts(r.hosts);
             const nuevoPrefijo = 32 - bitsHosts;
-            if(nuevoPrefijo < prefijo){
-                throw new Error(`${nombre} (${r.hosts} hosts) necesita /${nuevoPrefijo}, mas grande que toda la red `);
+            const tamano = 2 ** bitsHosts;
+
+            if (nuevoPrefijo < prefijo) {
+                throw new Error(`${r.nombre} (${r.hosts} hosts) necesita un bloque mayor que la red base`);
             }
+
+            const inicio = Math.ceil(siguiente / tamano) * tamano;
+            if (inicio + tamano > fin) {
+                throw new Error('No hay espacio suficiente en la red base para todas las subredes');
+            }
+
             siguiente = inicio + tamano;
-            return { ...describirSubred(inicio, nuevoPrefijo, r.nombre), hostsSolicitados: r.hosts, bitsHosts };
+            return {
+                ...describirSubred(inicio, nuevoPrefijo, r.nombre),
+                hostsSolicitados: r.hosts,
+                bitsHosts
+            };
         });
 
-        const usadas = siguiente - base;
-        return{
-            direccionesTotales : 2**(32-prefijo),
-            direccionesUsadas : usadas,
-            primerLibre : siguiente < fin ? enteroAIp(siguiente):null
+        return {
+            subredes,
+            direccionesTotales: 2 ** (32 - prefijo),
+            direccionesUsadas: subredes.reduce((suma, r) => suma + r.tamanoBloque, 0),
+            primerLibre: siguiente < fin ? enteroAIp(siguiente) : null
         };
     }
 
     const api = {
-        octetoABinario, pasosDecimalABinario, ipABinario, ipAEntero, enteroAIp, prefijoAMascara, mascaraAPrefijo, leerPrefijo, claseDeRed, esPrivada, hostsUtilizable, bitsParaHosts, analizarIp, subnetearFLSM, subnetearVLSM
+        octetoABinario, pasosDecimalABinario, ipABinario, ipAEntero, enteroAIp,
+        prefijoAMascara, mascaraAPrefijo, leerPrefijo, claseDeRed, esPrivada,
+        hostsUtilizable, bitsParaHosts, analizarIp, subnetearFLSM, subnetearVLSM
     };
 
-    //este ultimo es hacer este script como modulo o libreria propia
-    if(typeof module !== 'undefined' && module.exports) module.exports = api;
+    if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else global.Subneteo = api;
-    
-})(typeof window !== 'undefined' ? window:globalThis)    
+})(typeof window !== 'undefined' ? window : globalThis);
