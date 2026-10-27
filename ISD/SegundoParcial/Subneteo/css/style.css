@@ -1,15 +1,15 @@
 :root {
-  --fondo: #f4f7f5;
-  --tarjeta: #ffffff;
-  --texto: #1c2321;
-  --suave: #5b6663;
-  --borde: #d8e0dc;
-  --acento: #128a4a;
-  --acento-claro: #e3f5ea;
-  --red: #1f5fbf;
-  --host: #b0561a;
-  --error: #b3261e;
-  --error-fondo: #fdecea;
+  --fondo: hsl(254, 18%, 28%);
+  --tarjeta: #ff9dea86;
+  --texto: #0e0a4a;
+  --suave: #000000;
+  --borde: #f3f9f6;
+  --acento: #eb6ec1;
+  --acento-claro: #6094e7b7;
+  --red: #76c0eb;
+  --host: #e7ad32;
+  --error: #ac5bf8;
+  --error-fondo: #f8dad7;
   --mono: "Cascadia Code", Consolas, "Courier New", monospace;
 }
 
@@ -25,7 +25,7 @@ body {
 
 .encabezado {
   background: var(--acento);
-  color: #fff;
+  color: #fbfcfc;
   padding: 24px 32px;
 }
 .encabezado h1 { margin: 0; font-size: 1.7rem; }
@@ -87,7 +87,7 @@ button {
   border-radius: 6px;
   border: 1px solid var(--acento);
   background: var(--acento);
-  color: #fff;
+  color: #fff7f7;
   cursor: pointer;
 }
 button:hover { filter: brightness(1.08); }
