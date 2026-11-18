@@ -1,6 +1,9 @@
 // La página solo hace fetch a la API. El navegador manda la cookie solo (misma página, mismo servidor).
+
+// Un atajo para no escribir document.getElementById completo cada vez que agarremos un elemento del HTML.
 const $ = (id) => document.getElementById(id);
 
+// Agrupamos el fetch aquí para no repetir headers en cada llamada y que si el server manda algo que no es JSON, no truene la app.
 async function llamar(metodo, url, cuerpo) {
   const opciones = { method: metodo, headers: {} };
   if (cuerpo) {
@@ -13,6 +16,7 @@ async function llamar(metodo, url, cuerpo) {
   return { status: respuesta.status, datos };
 }
 
+// Ponemos cada respuesta arriba en la bitácora con su color de status y usamos textContent por seguridad para evitar XSS.
 function anotar(metodo, url, status, datos) {
   const li = document.createElement('li');
   const clase = status < 300 ? 'ok' : status === 401 ? 'e401' : status === 403 ? 'e403' : 'error';
@@ -23,6 +27,7 @@ function anotar(metodo, url, status, datos) {
   $('bitacora').prepend(li);
 }
 
+// Le pedimos al server el estado de la sesión porque como la cookie es httpOnly, JS no la puede leer directamente.
 async function refrescarEstado() {
   const { status, datos } = await llamar('GET', '/api/sesion');
   const estado = $('estado');
@@ -36,6 +41,7 @@ async function refrescarEstado() {
   $('cookie-js').textContent = document.cookie || '(vacío)';
 }
 
+// Limpiamos la tabla antes de meter los datos nuevos para que no se dupliquen las filas cada vez que se actualice.
 async function refrescarSesiones() {
   const { datos: respuesta } = await llamar('GET', '/api/diagnostico/sesiones');
   const datos = respuesta ? respuesta.sesiones : [];
@@ -63,15 +69,18 @@ async function refrescarSesiones() {
   }
 }
 
+// Unimos ambas funciones para actualizar la pantalla completa al mismo tiempo y que no quede desincronizado.
 async function refrescarTodo() {
   await refrescarEstado();
   await refrescarSesiones();
 }
 
+// Ponemos la contraseña en automático al cambiar de usuario para no escribirla a mano cada vez que probemos.
 $('usuario').addEventListener('change', () => {
   $('contrasena').value = `${$('usuario').value}12345`;
 });
 
+// Evitamos que la página se recargue con preventDefault al hacer submit para no borrar el historial de la bitácora.
 $('form-login').addEventListener('submit', async (evento) => {
   evento.preventDefault();
   const cuerpo = { usuario: $('usuario').value, contrasena: $('contrasena').value };
@@ -80,6 +89,7 @@ $('form-login').addEventListener('submit', async (evento) => {
   await refrescarTodo();
 });
 
+// Recorremos todos los botones con data-url para no programar un evento por separado a cada uno.
 for (const boton of document.querySelectorAll('[data-url]')) {
   boton.addEventListener('click', async () => {
     const { metodo, url } = boton.dataset;
@@ -89,9 +99,11 @@ for (const boton of document.querySelectorAll('[data-url]')) {
   });
 }
 
+// Conectamos los botones de refrescar manual para checar si la sesión venció o si se reinició el server.
 $('btn-refrescar').addEventListener('click', refrescarTodo);
 $('btn-sesiones').addEventListener('click', refrescarSesiones);
 
+// Jalamos la config y el estado apenas abre la página para que no se vea vacía de inicio.
 llamar('GET', '/api/config').then(({ datos }) => {
   $('config').textContent = JSON.stringify(datos, null, 2);
 });
