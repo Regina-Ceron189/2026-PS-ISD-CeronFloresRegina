@@ -8,6 +8,7 @@ module.exports = {
 
   // Cuánto dura la sesión, en milisegundos. 10 minutos = 10 * 60 * 1000
   maxAgeMs: 10 * 60 * 1000,
+  
 
   // true: cada petición reinicia el reloj de la expiración (la sesión vence por inactividad).
   // false: vence a la hora fija, aunque el usuario siga usando la página.

@@ -12,8 +12,7 @@ const NOMBRE_COOKIE = 'connect.sid';
 
 function todasLasSesiones(almacen){
   return new Promise((resolve, reject)=>{
-    const promesa = almacen.all((error, sesiones)=> (error ? reject(error) : resolve(sesiones)));
-    if (promesa && typeof promesa.then === 'function') promesa.then(resolve, reject);
+    almacen.all((error, sesiones) => (error ? reject(error) : resolve(sesiones)));
   });
 }
 
@@ -25,7 +24,7 @@ function crearApp(config, pool){
 
   //necesito crear una sesión a partir del tipo, rol y privilegio del usuario
   //opcion 1 manejorlo desde mysql, significa que debo de tener una tabla de sesiones
-  //opcion 2 manejorlo desde memoria 
+  //opcion 2 manejorlo desde memoria
 
   const almacen = config.almacen === 'memoria'
     ? new session.MemoryStore()
@@ -42,40 +41,31 @@ function crearApp(config, pool){
       saveUninitialized : false, //no crea la sesion ni la cookie
       rolling : config.rolling,
       cookie : {
-        maxAge: config.maxAge || 1000*60*60*24,
+        maxAge: config.maxAgeMs,
         httpOnly: config.httpOnly,
         sameSite : config.sameSite,
         secure : false //activar el https
       }
     })
-  )
-  
+  );
+
   //conocer el id de la sesión
   const idCorto = (id) => (id ? `${id.slice(0, 8)}...` : null);
 
   //en el uso de middleware como existe el intercambio de la sesion para tener un seguimiento del usuario, rol, privilegio, etc, se utiliza el atributo roling para poder extener su uso
 
-  function requiereSesion(req, res, next){
-    return pendiente(1)(req, res, next);
-  }
-
-  function requiereRol(rol){
-    return pendiente(3);
+  function vencida(sesion){
+    const desde = config.rolling ? sesion.ultimoUso : sesion.creada;
+    return !desde || Date.now() - desde > config.maxAgeMs;
   }
 
   //cuando estemos utilizando un middleware verificar la sesión actividad a partir ya sea de la consulta al servidor o la cookie
-  function vencida(sesion){
-    const desde = config.rolling ? sesion.ultimoUso : sesion.creada;
-    return Date.now() - desde > config.maxAge;
-  }
-
-  //tenemos que identicar quien entro
   function requiereSesion(req, res, next){
     if (req.session.usuario && vencida(req.session)){
       return req.session.destroy(() => {
         res.clearCookie(NOMBRE_COOKIE);
-        res.status(401).json({error: '401 Tu sesión ha vencido. Por favor vuelve a ingresar tu usuario'});
-      }); 
+        res.status(401).json({error: '401 · Tu sesión venció: vuelve a iniciar sesión'});
+      });
     }
     if(!req.session.usuario){
       return res.status(401).json({error: 'No has iniciado sesión'});
@@ -93,12 +83,11 @@ function crearApp(config, pool){
     };
   }
 
-
   app.get('/api/config', (req, res) => res.json(config));
 
   //vamos a generar un contador en la sesion, sirve para saver que la sesion existe antes de entrar
   app.post('/api/visita', (req, res) =>{
-    if(!req.session) return pendiente(1)(req, res);
+    if(!req.session) return res.status(501).json({error: 'Ruta pendiente'});
     req.session.visitas = (req.session.visitas || 0)+1;
     res.json({visitas : req.session.visitas, sesion : idCorto(req.sessionID)});
   });
@@ -116,7 +105,7 @@ function crearApp(config, pool){
 
       //guardo la sesion
       const guardar = () =>{
-        req.session.datos = datos;
+        req.session.usuario = datos;
         req.session.visitas = visitas;
         req.session.creada = Date.now();
         req.session.ultimoUso = Date.now();
@@ -127,15 +116,15 @@ function crearApp(config, pool){
       };
 
       if(config.regenerarAlEntrar){
-      //se crea una nueva sesion y se descarta la anterior
-      req.session.regenerate((error) => (error ? next(error) : guardar()))
-    }else{
-      guardar();
-    }
+        //se crea una nueva sesion y se descarta la anterior
+        req.session.regenerate((error) => (error ? next(error) : guardar()));
+      }else{
+        guardar();
+      }
 
     }catch(error){
       next(error);
-    } 
+    }
   });
 
   //cerrar sesion
@@ -147,7 +136,7 @@ function crearApp(config, pool){
     });
   });
 
-   app.get('/api/sesion', requiereSesion, (req, res) =>{
+  app.get('/api/sesion', requiereSesion, (req, res) =>{
     const desde = config.rolling ? req.session.ultimoUso : req.session.creada;
     res.json({
       usuario : req.session.usuario,
@@ -169,20 +158,21 @@ function crearApp(config, pool){
   app.get('/api/diagnostico/sesiones', async(req, res, next)=>{
     try{
       const sesiones = await todasLasSesiones(almacen);
-      const lista = Object.entries(sesiones || {}).map(([id], s) =>({
+      const lista = Object.entries(sesiones || {}).map(([id, s]) =>({
         sesion : idCorto(id),
-        esLaTuta : id === req.sessionID,
+        esLaTuya : id === req.sessionID,
         usuario : s.usuario ? s.usuario.usuario : '(sin iniciar sesion)',
         visitas: s.visitas || 0,
         expira: s.cookie && s.cookie.expires,
       }));
+
       res.json({almacen: config.almacen, sesiones: lista});
     }catch(error){
       next(error);
     }
   });
 
-  app.use('/api', (req, res)=> res.status(404).json({error: 'Ruta no encontrada'}))
+  app.use('/api', (req, res)=> res.status(404).json({error: 'Ruta no encontrada'}));
 
   app.use(express.static(path.join(__dirname, 'public')));
 
